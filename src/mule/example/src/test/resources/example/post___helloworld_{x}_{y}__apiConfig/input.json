@@ -1,0 +1,12 @@
+{
+	"__setProperties": true,
+	"payload": {},
+	"properties": {
+		"inbound": {
+			"http.uri.params": {
+				"x": "foo",
+				"y": "bar"
+			}
+		}
+	}
+}

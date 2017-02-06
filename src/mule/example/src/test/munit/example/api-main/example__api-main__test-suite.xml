@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:mock="http://www.mulesoft.org/schema/mule/mock" xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/mock/current/mule-mock.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+ <munit:config doc:name="MUnit configuration" mock-connectors="false" mock-inbounds="false" name="munit" />
+
+ <spring:beans>
+  <spring:import resource="classpath:example.xml" />
+
+ </spring:beans>
+ <munit:before-test description="Before tests actions" name="example__api-main__test-suite__BeforeTest">
+  <munit:set doc:name="Set Response for SUCCESS outcome" payload="#[Thread.currentThread().getContextClassLoader().getResourceAsStream('example/api-main/output.json')]" />
+
+  <object-to-string-transformer doc:name="Expected Response to String" />
+
+  <json:object-to-json-transformer doc:name="Expected Response to JSON" />
+
+  <set-variable doc:name="Stash Expected Payload" value="#[payload]" variableName="expectedPayload" />
+
+  <munit:set doc:name="Set Request for SUCCESS outcome" payload="#[Thread.currentThread().getContextClassLoader().getResourceAsStream('example/api-main/input.json')]" />
+
+  <object-to-string-transformer doc:name="Object to String" />
+
+  <json:object-to-json-transformer doc:name="Object to JSON" />
+
+  <json:json-to-object-transformer doc:name="JSON to Object">
+  </json:json-to-object-transformer>
+  <choice doc:name="Choice - Set Properties?">
+   <when expression="#[(payload.hasNode('__setProperties')) &amp;&amp; (payload.get('__setProperties') != null) &amp;&amp; (payload.get('__setProperties').toString().equals('true')) &amp;&amp; (payload.get('properties') != null) &amp;&amp; (payload.get('payload') != null)]">
+    <scripting:transformer doc:name="Set Inbound, Outbound, Invocation, or Session Properties">
+     <scripting:script engine="Groovy">
+      <![CDATA[input_payload = payload;
+System.out.println('Input Payload: '+input_payload);
+
+properties = input_payload.get('properties');
+System.out.println('Properties: '+properties);
+
+inbound_properties = properties.get('inbound');
+System.out.println('Inbound Properties: '+inbound_properties);
+
+if (inbound_properties != null) {
+    for (inbound_property in inbound_properties.getFields()) {
+        inbound_property_key = inbound_property.getKey();
+        inbound_property_value = inbound_property.getValue();
+        
+        if (inbound_property_value.getFields().size() >= 1) {
+            _inbound_property_value = new HashMap<String,Object>();
+            for (value_field in inbound_property_value.getFields()) {
+                value_field_key = value_field.getKey();
+                value_field_value = value_field.getValue();
+            
+                System.out.println('/t/tValue Field Key: '+value_field_key);
+                System.out.println('/t/tValue Field Value: '+value_field_value);
+                _inbound_property_value.put(value_field_key.toString().replace('"',''), value_field_value.toString().replace('"',''));
+            }
+            
+            inbound_property_value = _inbound_property_value;
+        }
+        
+        System.out.println('/tInbound Property: {'+inbound_property_key+':'+inbound_property_value+'}');
+        message.setInboundProperty(inbound_property_key, inbound_property_value);
+    }
+}
+
+
+outbound_properties = properties.get('outbound');
+System.out.println('Outbound Properties: '+outbound_properties);
+
+if (outbound_properties != null) {
+    for (outbound_property in outbound_properties.getFields()) {
+        outbound_property_key = outbound_property.getKey();
+        outbound_property_value = outbound_property.getValue();
+        
+        if (outbound_property_value.getFields().size() >= 1) {
+            _outbound_property_value = new HashMap<String,Object>();
+            for (value_field in outbound_property_value.getFields()) {
+                value_field_key = value_field.getKey();
+                value_field_value = value_field.getValue();
+            
+                System.out.println('/t/tValue Field Key: '+value_field_key);
+                System.out.println('/t/tValue Field Value: '+value_field_value);
+                _outbound_property_value.put(value_field_key.toString().replace('"',''), value_field_value.toString().replace('"',''));
+            }
+            
+            outbound_property_value = _outbound_property_value;
+        }
+        else {
+            outbound_property_value = outbound_property_value.toString().replace('"','');
+        }
+        
+        System.out.println('/tOutbound Property: {'+outbound_property_key+':'+outbound_property_value+'}');
+        message.setOutboundProperty(outbound_property_key, outbound_property_value);
+    }
+}
+
+invocation_properties = properties.get('invocation');
+System.out.println('Invocation Properties: '+invocation_properties);
+
+if (invocation_properties != null) {
+    for (invocation_property in invocation_properties.getFields()) {
+        invocation_property_key = invocation_property.getKey();
+        invocation_property_value = invocation_property.getValue();
+        
+        if (invocation_property_value.getFields().size() >= 1) {
+            _invocation_property_value = new HashMap<String,Object>();
+            for (value_field in invocation_property_value.getFields()) {
+                value_field_key = value_field.getKey();
+                value_field_value = value_field.getValue();
+            
+                System.out.println('/t/tValue Field Key: '+value_field_key);
+                System.out.println('/t/tValue Field Value: '+value_field_value);
+                _invocation_property_value.put(value_field_key.toString().replace('"',''), value_field_value.toString().replace('"',''));
+            }
+            
+            invocation_property_value = _invocation_property_value;
+        }
+        else {
+            invocation_property_value = invocation_property_value.toString().replace('"','');
+        }
+        
+        System.out.println('/tInvocation Property: {'+invocation_property_key+':'+invocation_property_value+'}');
+        message.setInvocationProperty(invocation_property_key, invocation_property_value);
+    }
+}
+
+session_properties = properties.get('session');
+System.out.println('Session Properties: '+session_properties);
+
+if (session_properties != null) {
+    for (session_property in session_properties.getFields()) {
+        session_property_key = session_property.getKey();
+        session_property_value = session_property.getValue();
+        
+        if (session_property_value.getFields().size() >= 1) {
+            _session_property_value = new HashMap<String,Object>();
+            for (value_field in inbound_property_value.getFields()) {
+                value_field_key = value_field.getKey();
+                value_field_value = value_field.getValue();
+            
+                System.out.println('/t/tValue Field Key: '+value_field_key);
+                System.out.println('/t/tValue Field Value: '+value_field_value);
+                _session_property_value.put(value_field_key.toString().replace('"',''), value_field_value.toString().replace('"',''));
+            }
+            
+            session_property_value = _session_property_value;
+        }
+        else {
+            session_property_value = session_property_value.toString().replace('"','');
+        }
+        
+        System.out.println('/tSession Property: {'+session_property_key+':'+session_property_value+'}');
+        message.setSessionProperty(session_property_key, session_property_value);
+    }
+}
+
+return payload.get('payload');]]>
+     </scripting:script>
+    </scripting:transformer>
+   </when>
+   <otherwise>
+    <logger doc:name='Bypassing "Set Properties" Path' level="INFO" />
+
+   </otherwise>
+  </choice>
+  <logger doc:name="debug" level="INFO" message="before test payload: #[payload]" />
+
+ </munit:before-test>
+ <munit:test description="Test" ignore="true" name="test-suite__example__api-main">
+  <mock:when doc:name="Mock-HTTP" messageProcessor=".*:.*">
+   <mock:with-attributes>
+    <mock:with-attribute name="doc:name" whereValue="#['HTTP']" />
+
+   </mock:with-attributes>
+  </mock:when>
+  <flow-ref doc:name="api-main" name="api-main" />
+
+  <dw:transform-message doc:name="Transform Payload to JSON">
+   <dw:set-payload>
+    <![CDATA[%dw 1.0
+%output application/json
+---
+payload]]>
+   </dw:set-payload>
+  </dw:transform-message>
+  <object-to-string-transformer doc:name="Transform JSON Payload to String" />
+
+  <munit:assert-on-equals actualValue="#[payload.toString().replace('\n', '').replace('\r', '').replace('\t', '').replace(' ', '')]" doc:name="Assert Equals" expectedValue="#[flowVars.expectedPayload.toString().replace('\n', '').replace('\r', '').replace('\t', '').replace(' ', '')]" />
+
+ </munit:test>
+</mule>
